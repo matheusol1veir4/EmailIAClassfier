@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Classificador de Emails{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <h1>Classificador de Emails</h1>
+    <p>Processe emails para classificacao automatica e sugestao de respostas</p>
+</section>
+
+<div class="main-grid">
+    <section class="card">
+        <h2 class="card-title">Novo Email para Analise</h2>
+        <div class="input-section">
+            <div class="input-tabs">
+                <button class="tab-button active" data-tab="tab-text">Texto</button>
+                <button class="tab-button" data-tab="tab-file">Arquivo</button>
+            </div>
+            <div id="tab-text" class="tab-content active">
+                <div class="form-group">
+                    <label class="form-label">Cole o conteudo do email <span>(obrigatorio)</span></label>
+                    <textarea id="emailText" placeholder="Cole aqui o corpo completo do email que deseja analisar..."></textarea>
+                </div>
+            </div>
+            <div id="tab-file" class="tab-content">
+                <div class="form-group">
+                    <label class="form-label">Selecione um arquivo <span>(TXT ou PDF)</span></label>
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <div class="file-upload-text">Clique para selecionar arquivo</div>
+                        <div class="file-types">Ou arraste um arquivo TXT ou PDF aqui</div>
+                    </div>
+                    <input type="file" id="fileInput" accept=".txt,.pdf">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email do destinatario <span>(obrigatorio)</span></label>
+                <input type="email" id="emailDestinario" placeholder="Ex: cliente@empresa.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Assunto do email <span>(opcional)</span></label>
+                <input type="text" id="emailSubject" placeholder="Ex: Solicitacao de suporte tecnico">
+            </div>
+            <button class="btn-primary" id="submitButton">Classificar e Sugerir Resposta</button>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2 class="card-title">Resultado da Analise</h2>
+        <div class="result-section" id="resultSection">
+            <div class="result-empty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                </svg>
+                <p><strong>Nenhum email analisado ainda</strong></p>
+                <p class="muted">Insira um email a esquerda para comecar</p>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

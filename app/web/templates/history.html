@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Emails Respondidos{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <h1>Emails Respondidos</h1>
+    <p>Historico de todos os emails que voce processou e respondeu</p>
+</section>
+
+<section class="card">
+    <div class="result-section" id="historySection">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>Destinatario</th>
+                    <th>Assunto</th>
+                    <th>Classificacao</th>
+                    <th>Acao</th>
+                </tr>
+            </thead>
+            <tbody id="historyBody">
+                <tr>
+                    <td colspan="5" class="history-empty">Nenhum email respondido ainda</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="modal" id="detailModal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Detalhes do Email</h2>
+            <button class="btn-secondary" id="closeModal">Fechar</button>
+        </div>
+        <div class="modal-body" id="detailContent"></div>
+    </div>
+</div>
+{% endblock %}
