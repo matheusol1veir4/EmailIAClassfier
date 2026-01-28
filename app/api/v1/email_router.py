@@ -43,11 +43,11 @@ def extract_text_from_file(file: UploadFile) -> str:
 @router.post("/classify", response_model=EmailResponse)
 def classify_email(
     current_user: Annotated[User, Depends(get_current_user)],
-    email_body: Annotated[Optional[str], Form(default=None)],
     email_destinatario: Annotated[str, Form(...)],
-    assunto: Annotated[Optional[str], Form(default=None)],
-    arquivo: Annotated[Optional[UploadFile], File(default=None)],
     email_service: Annotated[EmailService, Depends(get_email_service)],
+    email_body: Annotated[Optional[str], Form()] = None,
+    assunto: Annotated[Optional[str], Form()] = None,
+    arquivo: Annotated[Optional[UploadFile], File()] = None,
 ) -> EmailResponse:
     """Processa o email recebido e retorna classificacao e resposta sugerida."""
     if email_body is None and arquivo is None:
@@ -79,8 +79,8 @@ def mark_responded(
 @router.get("/history", response_model=list[EmailHistoryItem])
 def get_history(
     current_user: Annotated[User, Depends(get_current_user)],
-    respondido: Optional[bool] = None,
     email_service: Annotated[EmailService, Depends(get_email_service)],
+    respondido: Optional[bool] = None,
 ) -> list[EmailHistoryItem]:
     """Retorna o historico de emails do usuario autenticado."""
     return email_service.list_history(current_user.id or 0, respondido)
