@@ -4,7 +4,9 @@ from fastapi.staticfiles import StaticFiles
 from app.api.v1.auth_router import router as auth_router
 from app.api.v1.email_router import router as email_router
 from app.api.v1.health_router import router as health_router
+from app.core.config import get_settings
 from app.core.database import create_db_and_tables
+from app.core.seed_user import seed_user
 from app.web.web_router import router as web_router
 
 
@@ -20,7 +22,10 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     def on_startup() -> None:
         """Inicializa recursos essenciais da aplicacao."""
+        settings = get_settings()
         create_db_and_tables()
+        if settings.seed_enabled:
+            seed_user()
 
     return app
 

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     huggingface_api_key: str = ""
     llm_api_key: str = ""
     debug: bool = False
+    seed_enabled: bool = True
     environment: str = "development"
 
     class Config:

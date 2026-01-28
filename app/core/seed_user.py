@@ -1,7 +1,7 @@
 from app.core.config import get_settings
 from sqlmodel import Session
 
-from app.core.database import engine
+from app.core.database import create_db_and_tables, engine
 from app.core.security import hash_password
 from app.models.user_model import User
 from app.repositories.user_repository import UserRepository
@@ -28,6 +28,7 @@ def seed_user() -> User:
 
 def main() -> None:
     """Executa o seed do usuario inicial."""
+    create_db_and_tables()
     seed_user()
 
 
