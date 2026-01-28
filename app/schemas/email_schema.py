@@ -33,6 +33,13 @@ class EmailHistoryItem(BaseModel):
     created_at: datetime
 
 
+class EmailHistoryResponse(BaseModel):
+    """Define o retorno do historico de emails com total."""
+
+    emails: list[EmailHistoryItem]
+    total: int
+
+
 class EmailDetailResponse(BaseModel):
     """Define o retorno detalhado de um email."""
 

@@ -3,7 +3,12 @@ from typing import Any, List
 
 from app.models.email_model import Email
 from app.repositories.email_repository import EmailRepository
-from app.schemas.email_schema import EmailDetailResponse, EmailHistoryItem, EmailResponse
+from app.schemas.email_schema import (
+    EmailDetailResponse,
+    EmailHistoryItem,
+    EmailHistoryResponse,
+    EmailResponse,
+)
 
 
 class EmailService:
@@ -56,10 +61,14 @@ class EmailService:
         updated = self._email_repository.update(email)
         return self._to_detail_response(updated)
 
-    def list_history(self, user_id: int, respondido: bool | None = None) -> List[EmailHistoryItem]:
+    def list_history(self, user_id: int, respondido: bool | None = None) -> EmailHistoryResponse:
         """Lista emails do usuario com filtro opcional por status de resposta."""
         emails = self._email_repository.list_by_user(user_id, respondido)
-        return [self._to_history_item(email) for email in emails]
+        total = self._email_repository.count_by_user(user_id, respondido)
+        return EmailHistoryResponse(
+            emails=[self._to_history_item(email) for email in emails],
+            total=total,
+        )
 
     def get_email_detail(self, email_id: int) -> EmailDetailResponse:
         """Retorna o detalhe de um email especifico."""

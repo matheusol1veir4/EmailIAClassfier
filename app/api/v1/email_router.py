@@ -11,7 +11,7 @@ from app.models.user_model import User
 from app.nlp.classifier_client import ClassifierClient
 from app.nlp.llm_client import LlmClient
 from app.repositories.email_repository import EmailRepository
-from app.schemas.email_schema import EmailDetailResponse, EmailHistoryItem, EmailResponse
+from app.schemas.email_schema import EmailDetailResponse, EmailHistoryResponse, EmailResponse
 from app.services.email_service import EmailService
 
 router = APIRouter(prefix="/api/v1/emails", tags=["emails"])
@@ -76,12 +76,12 @@ def mark_responded(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
 
-@router.get("/history", response_model=list[EmailHistoryItem])
+@router.get("/history", response_model=EmailHistoryResponse)
 def get_history(
     current_user: Annotated[User, Depends(get_current_user)],
     email_service: Annotated[EmailService, Depends(get_email_service)],
     respondido: Optional[bool] = None,
-) -> list[EmailHistoryItem]:
+) -> EmailHistoryResponse:
     """Retorna o historico de emails do usuario autenticado."""
     return email_service.list_history(current_user.id or 0, respondido)
 
