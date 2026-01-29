@@ -27,10 +27,9 @@ class EmailService:
         email_destinatario: str,
         assunto: str | None = None,
     ) -> EmailResponse:
-        """Processa um email, classifica e gera resposta sugerida."""
+        """Processa um email e retorna apenas a classificacao."""
         classification_result = self._classifier_client.classify_email(email_body)
         classification = self._extract_label(classification_result)
-        generated_response = self._llm_client.generate_response(classification, email_body)
 
         email = Email(
             user_id=user_id,
@@ -38,7 +37,7 @@ class EmailService:
             assunto=assunto,
             raw_body=email_body,
             classification=classification,
-            generated_response=generated_response,
+            generated_response=None,
         )
         saved_email = self._email_repository.create(email)
 
@@ -48,6 +47,19 @@ class EmailService:
             generated_response=saved_email.generated_response,
             email_destinatario=saved_email.email_destinatario,
         )
+
+    def generate_response(self, email_id: int, user_id: int) -> EmailDetailResponse:
+        """Gera resposta sugerida para um email ja classificado."""
+        email = self._email_repository.get_by_id_for_user(email_id, user_id)
+        if email is None:
+            raise ValueError("Email nao encontrado")
+        if not email.classification:
+            raise ValueError("Email sem classificacao")
+
+        email.generated_response = self._llm_client.generate_response(email.classification, email.raw_body)
+        email.updated_at = datetime.utcnow()
+        updated = self._email_repository.update(email)
+        return self._to_detail_response(updated)
 
     def mark_responded(self, email_id: int, user_id: int) -> EmailDetailResponse:
         """Marca um email do usuario como respondido e retorna os dados atualizados."""

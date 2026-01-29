@@ -17,7 +17,7 @@ class EmailResponse(BaseModel):
 
     id: int
     classification: str
-    generated_response: str
+    generated_response: Optional[str]
     email_destinatario: EmailStr
 
 
@@ -48,7 +48,7 @@ class EmailDetailResponse(BaseModel):
     email_destinatario: EmailStr
     assunto: Optional[str]
     classification: str
-    generated_response: str
+    generated_response: Optional[str]
     respondido: bool
     respondido_em: Optional[datetime]
     created_at: datetime

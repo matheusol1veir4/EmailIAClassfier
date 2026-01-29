@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     huggingface_api_key: str = ""
     huggingface_model: str = "joeddav/xlm-roberta-base-xnli"
+    huggingface_endpoint_base: str = "https://router.huggingface.co/hf-inference/models"
     llm_api_key: str = ""
     llm_endpoint: str = "https://api.openai.com/v1/chat/completions"
     llm_model: str = "gpt-4o-mini"

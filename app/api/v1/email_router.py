@@ -1,4 +1,5 @@
 from io import BytesIO
+import logging
 from typing import Annotated, Optional
 
 import pdfplumber
@@ -9,12 +10,14 @@ from app.api.v1.auth_router import get_current_user
 from app.core.database import get_session
 from app.models.user_model import User
 from app.nlp.classifier_client import ClassifierClient
+from app.nlp.exceptions import ConfigurationError, ExternalServiceError
 from app.nlp.llm_client import LlmClient
 from app.repositories.email_repository import EmailRepository
 from app.schemas.email_schema import EmailDetailResponse, EmailHistoryResponse, EmailResponse
 from app.services.email_service import EmailService
 
 router = APIRouter(prefix="/api/v1/emails", tags=["emails"])
+logger = logging.getLogger(__name__)
 
 MAX_UPLOAD_BYTES = 2 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".txt", ".pdf"}
@@ -71,10 +74,45 @@ def classify_email(
 
     try:
         return email_service.process_email(current_user.id or 0, email_body, email_destinatario, assunto)
-    except ValueError as exc:
+    except ConfigurationError as exc:
+        logger.warning("Configuracao de IA invalida ou ausente: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "erro": "configuracao_ia",
+                "mensagem": f"Configuracao de IA ausente ou invalida: {exc}",
+                "acao": "Verifique as chaves e variaveis no .env",
+            },
+        ) from exc
+    except ExternalServiceError as exc:
+        status_label = f"Status: {exc.status_code}. " if exc.status_code else ""
+        endpoint_label = f"Endpoint: {exc.endpoint}. " if exc.endpoint else ""
+        logger.error(
+            "Falha no provedor de IA: service=%s status=%s endpoint=%s detail=%s",
+            exc.service,
+            exc.status_code,
+            exc.endpoint,
+            exc.detail,
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Falha ao processar o email com a IA: {exc}",
+            detail={
+                "erro": "falha_provedor_ia",
+                "provedor": exc.service,
+                "status_http": exc.status_code,
+                "endpoint": exc.endpoint,
+                "mensagem": f"{status_label}{endpoint_label}Detalhe: {exc.detail}".strip(),
+            },
+        ) from exc
+    except ValueError as exc:
+        logger.error("Falha ao processar email com IA: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={
+                "erro": "falha_processamento_ia",
+                "mensagem": f"Falha ao processar o email com a IA: {exc}",
+            },
         ) from exc
 
 
@@ -89,6 +127,51 @@ def mark_responded(
         return email_service.mark_responded(email_id, current_user.id or 0)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+
+@router.post("/{email_id}/generate-response", response_model=EmailDetailResponse)
+def generate_response(
+    email_id: int,
+    current_user: Annotated[User, Depends(get_current_user)],
+    email_service: Annotated[EmailService, Depends(get_email_service)],
+) -> EmailDetailResponse:
+    """Gera a resposta sugerida para um email ja classificado."""
+    try:
+        return email_service.generate_response(email_id, current_user.id or 0)
+    except ConfigurationError as exc:
+        logger.warning("Configuracao de IA invalida ou ausente: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "erro": "configuracao_ia",
+                "mensagem": f"Configuracao de IA ausente ou invalida: {exc}",
+                "acao": "Verifique as chaves e variaveis no .env",
+            },
+        ) from exc
+    except ExternalServiceError as exc:
+        status_label = f"Status: {exc.status_code}. " if exc.status_code else ""
+        endpoint_label = f"Endpoint: {exc.endpoint}. " if exc.endpoint else ""
+        logger.error(
+            "Falha no provedor de IA: service=%s status=%s endpoint=%s detail=%s",
+            exc.service,
+            exc.status_code,
+            exc.endpoint,
+            exc.detail,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail={
+                "erro": "falha_provedor_ia",
+                "provedor": exc.service,
+                "status_http": exc.status_code,
+                "endpoint": exc.endpoint,
+                "mensagem": f"{status_label}{endpoint_label}Detalhe: {exc.detail}".strip(),
+            },
+        ) from exc
+    except ValueError as exc:
+        status_code = status.HTTP_404_NOT_FOUND if "nao encontrado" in str(exc).lower() else status.HTTP_400_BAD_REQUEST
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.get("/history", response_model=EmailHistoryResponse)

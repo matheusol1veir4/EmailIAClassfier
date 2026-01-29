@@ -15,7 +15,7 @@ class Email(SQLModel, table=True):
     assunto: Optional[str] = Field(default=None, max_length=255)
     raw_body: str = Field(nullable=False)
     classification: str = Field(nullable=False, max_length=50)
-    generated_response: str = Field(nullable=False)
+    generated_response: Optional[str] = Field(default=None, nullable=True)
     respondido: bool = Field(default=False)
     respondido_em: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)

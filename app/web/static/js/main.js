@@ -3,8 +3,6 @@ const state = {
     userEmail: null,
     lastAnalysis: null,
     lastResponse: null,
-    lastEmailBody: null,
-    lastFileUsed: false,
     history: [],
 };
 
@@ -181,10 +179,8 @@ async function processEmail() {
         assunto: emailSubject || '(sem assunto)',
     };
     state.lastResponse = data.generated_response;
-    state.lastEmailBody = file ? null : emailText || '';
-    state.lastFileUsed = Boolean(file);
     renderResult(data.classification, data.generated_response);
-    showToast('Email analisado');
+    showToast('Email classificado');
 }
 
 function renderResult(classification, responseText) {
@@ -194,6 +190,22 @@ function renderResult(classification, responseText) {
     }
     const badgeClass = classification === 'Produtivo' ? 'badge-productive' : 'badge-unproductive';
     const badgeText = classification === 'Produtivo' ? 'Produtivo' : 'Improdutivo';
+    const responseContent = responseText
+        ? `<div class="result-text" id="suggestedResponse">${responseText}</div>`
+        : `<div class="result-text muted" id="suggestedResponse">Resposta ainda nao gerada.</div>`;
+    const responseActions = responseText
+        ? `
+            <div class="response-actions">
+                <button class="btn-secondary" id="copyResponse">Copiar Resposta</button>
+                <button class="btn-secondary" id="regenerateResponse">Gerar novamente</button>
+                <button class="btn-success" id="markResponded">Marcar como Respondido</button>
+            </div>
+        `
+        : `
+            <div class="response-actions">
+                <button class="btn-success" id="generateResponse">Gerar resposta</button>
+            </div>
+        `;
     resultSection.innerHTML = `
         <div>
             <span class="classification-badge ${badgeClass}">${badgeText}</span>
@@ -204,17 +216,14 @@ function renderResult(classification, responseText) {
         </div>
         <div class="result-block">
             <div class="result-block-title">Resposta Sugerida</div>
-            <div class="result-text" id="suggestedResponse">${responseText}</div>
-            <div class="response-actions">
-                <button class="btn-secondary" id="copyResponse">Copiar Resposta</button>
-                <button class="btn-secondary" id="regenerateResponse">Regenerar</button>
-                <button class="btn-success" id="markResponded">Marcar como Respondido</button>
-            </div>
+            ${responseContent}
+            ${responseActions}
         </div>
     `;
 
     document.getElementById('copyResponse')?.addEventListener('click', copyResponse);
-    document.getElementById('regenerateResponse')?.addEventListener('click', regenerateResponse);
+    document.getElementById('regenerateResponse')?.addEventListener('click', () => generateResponse(true));
+    document.getElementById('generateResponse')?.addEventListener('click', () => generateResponse(false));
     document.getElementById('markResponded')?.addEventListener('click', markResponded);
 }
 
@@ -227,32 +236,18 @@ function copyResponse() {
     });
 }
 
-async function regenerateResponse() {
+async function generateResponse(isRegenerate) {
     if (!state.lastAnalysis) {
         return;
     }
-    if (state.lastFileUsed) {
-        showToast('Regeneracao indisponivel para arquivos', '#ff9800');
-        return;
-    }
-    if (!state.lastEmailBody) {
-        showToast('Nao ha conteudo para regenerar', '#ff9800');
-        return;
-    }
-    showToast('Gerando nova resposta', '#0066cc');
-    const formData = new FormData();
-    formData.append('email_destinatario', state.lastAnalysis.email_destinatario);
-    formData.append('assunto', state.lastAnalysis.assunto);
-    formData.append('email_body', state.lastEmailBody);
-
-    const response = await fetch('/api/v1/emails/classify', {
+    showToast(isRegenerate ? 'Gerando nova resposta' : 'Gerando resposta', '#0066cc');
+    const response = await fetch(`/api/v1/emails/${state.lastAnalysis.id}/generate-response`, {
         method: 'POST',
         headers: state.token ? { Authorization: `Bearer ${state.token}` } : undefined,
-        body: formData,
     });
 
     if (!response.ok) {
-        showToast('Nao foi possivel regenerar', '#ff9800');
+        showToast('Nao foi possivel gerar resposta', '#ff9800');
         return;
     }
 
@@ -262,7 +257,8 @@ async function regenerateResponse() {
     if (responseElement) {
         responseElement.textContent = state.lastResponse;
     }
-    showToast('Resposta atualizada');
+    renderResult(state.lastAnalysis.classification, state.lastResponse);
+    showToast('Resposta gerada');
 }
 
 async function markResponded() {
@@ -355,11 +351,12 @@ async function openDetailModal(email) {
         return;
     }
     const detail = await response.json();
+    const responseText = detail.generated_response || 'Resposta ainda nao gerada.';
     detailContent.innerHTML = `
         <div><strong>Destinatario:</strong> ${detail.email_destinatario}</div>
         <div><strong>Assunto:</strong> ${detail.assunto || '(sem assunto)'}</div>
         <div><strong>Classificacao:</strong> ${detail.classification}</div>
-        <div><strong>Resposta:</strong> ${detail.generated_response}</div>
+        <div><strong>Resposta:</strong> ${responseText}</div>
     `;
     modal.style.display = 'flex';
 }
