@@ -4,6 +4,7 @@ from typing import Generator
 
 import httpx
 import pytest
+import pytest_asyncio
 from fastapi import FastAPI
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -37,11 +38,11 @@ def app(tmp_path) -> FastAPI:
     return main_module.create_app()
 
 
-@pytest.fixture()
-def client(app: FastAPI) -> Generator[httpx.Client, None, None]:
-    """Fornece um cliente HTTP para testes de API."""
+@pytest_asyncio.fixture()
+async def client(app: FastAPI) -> Generator[httpx.AsyncClient, None, None]:
+    """Fornece um cliente HTTP assincrono para testes de API."""
     transport = httpx.ASGITransport(app=app)
-    with httpx.Client(transport=transport, base_url="http://test") as test_client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as test_client:
         yield test_client
 
 
