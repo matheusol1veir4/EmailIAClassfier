@@ -12,11 +12,13 @@ class LlmClient:
         """Inicializa o cliente com configuracoes do ambiente."""
         settings = get_settings()
         self._api_key = settings.llm_api_key
-        self._endpoint = "https://api.openrouter.ai/v1/chat/completions"
-        self._model = "meta-llama/llama-3.1-8b-instruct"
+        self._endpoint = settings.llm_endpoint
+        self._model = settings.llm_model
 
     def generate_response(self, classification: str, email_body: str) -> str:
         """Gera uma resposta automatica baseada na classificacao e no email."""
+        if not self._api_key:
+            raise ValueError("LLM_API_KEY nao configurada")
         prompt = self._build_prompt(classification, email_body)
         payload = {
             "model": self._model,
@@ -25,6 +27,7 @@ class LlmClient:
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.4,
+            "max_tokens": 256,
         }
         headers = {
             "Authorization": f"Bearer {self._api_key}",
@@ -33,6 +36,8 @@ class LlmClient:
         response = requests.post(self._endpoint, headers=headers, json=payload, timeout=30)
         response.raise_for_status()
         data = response.json()
+        if isinstance(data, dict) and data.get("error"):
+            raise ValueError(str(data["error"]))
         return data["choices"][0]["message"]["content"].strip()
 
     def _build_prompt(self, classification: str, email_body: str) -> str:

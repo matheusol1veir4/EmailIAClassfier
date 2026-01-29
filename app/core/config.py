@@ -16,7 +16,10 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     huggingface_api_key: str = ""
+    huggingface_model: str = "joeddav/xlm-roberta-large-xnli"
     llm_api_key: str = ""
+    llm_endpoint: str = "https://api.openai.com/v1/chat/completions"
+    llm_model: str = "gpt-4o-mini"
     debug: bool = False
     seed_enabled: bool = True
     environment: str = "development"
