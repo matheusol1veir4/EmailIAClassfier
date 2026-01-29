@@ -1,5 +1,6 @@
 const state = {
     token: null,
+    userEmail: null,
     lastAnalysis: null,
     lastResponse: null,
     lastEmailBody: null,
@@ -92,6 +93,11 @@ async function handleLogin(event) {
 
     const data = await response.json();
     state.token = data.access_token;
+    persistSession(state.token);
+    if (data.must_change_password) {
+        showToast('Troque sua senha no primeiro acesso', '#ff9800');
+    }
+    await refreshSessionUser();
     showToast('Login realizado');
     window.location.href = '/';
 }
@@ -375,12 +381,65 @@ function setupDetailModal() {
 function setupActions() {
     document.getElementById('submitButton')?.addEventListener('click', processEmail);
     document.getElementById('logoutButton')?.addEventListener('click', () => {
-        state.token = null;
+        clearSession();
         window.location.href = '/login';
     });
 }
 
+function persistSession(token) {
+    localStorage.setItem('auth_token', token);
+}
+
+function clearSession() {
+    state.token = null;
+    state.userEmail = null;
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_email');
+}
+
+function loadSession() {
+    const savedToken = localStorage.getItem('auth_token');
+    const savedEmail = localStorage.getItem('user_email');
+    state.token = savedToken;
+    state.userEmail = savedEmail;
+}
+
+async function refreshSessionUser() {
+    if (!state.token) {
+        return;
+    }
+    const response = await fetch('/api/v1/auth/me', {
+        headers: { Authorization: `Bearer ${state.token}` },
+    });
+    if (!response.ok) {
+        return;
+    }
+    const data = await response.json();
+    state.userEmail = data.email_institucional;
+    localStorage.setItem('user_email', state.userEmail);
+    updateUserHeader();
+}
+
+function updateUserHeader() {
+    const userEmail = document.getElementById('userEmail');
+    if (!userEmail) {
+        return;
+    }
+    userEmail.textContent = state.userEmail || 'Nao autenticado';
+}
+
+function requireAuth() {
+    const isLoginPage = window.location.pathname === '/login';
+    if (!state.token && !isLoginPage) {
+        window.location.href = '/login';
+    }
+}
+
 function init() {
+    loadSession();
+    updateUserHeader();
+    requireAuth();
+    refreshSessionUser();
     setActiveTab();
     configureLoginForm();
     setupInputTabs();

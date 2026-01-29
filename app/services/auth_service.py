@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from app.core.config import get_settings
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user_model import User
 from app.repositories.user_repository import UserRepository
@@ -13,6 +14,7 @@ class AuthService:
     def __init__(self, user_repository: UserRepository) -> None:
         """Inicializa o servico com o repositorio de usuarios."""
         self._user_repository = user_repository
+        self._settings = get_settings()
 
     def login(self, payload: LoginRequest) -> TokenResponse:
         """Autentica o usuario e gera token de acesso JWT."""
@@ -22,7 +24,7 @@ class AuthService:
 
         access_token = create_access_token(
             data={"sub": user.email_institucional, "user_id": user.id},
-            expires_delta=timedelta(minutes=60),
+            expires_delta=timedelta(minutes=self._settings.access_token_expire_minutes),
         )
         return TokenResponse(
             access_token=access_token,

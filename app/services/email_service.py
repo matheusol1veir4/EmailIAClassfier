@@ -49,9 +49,9 @@ class EmailService:
             email_destinatario=saved_email.email_destinatario,
         )
 
-    def mark_responded(self, email_id: int) -> EmailDetailResponse:
-        """Marca um email como respondido e retorna os dados atualizados."""
-        email = self._email_repository.get_by_id(email_id)
+    def mark_responded(self, email_id: int, user_id: int) -> EmailDetailResponse:
+        """Marca um email do usuario como respondido e retorna os dados atualizados."""
+        email = self._email_repository.get_by_id_for_user(email_id, user_id)
         if email is None:
             raise ValueError("Email nao encontrado")
 
@@ -70,9 +70,9 @@ class EmailService:
             total=total,
         )
 
-    def get_email_detail(self, email_id: int) -> EmailDetailResponse:
-        """Retorna o detalhe de um email especifico."""
-        email = self._email_repository.get_by_id(email_id)
+    def get_email_detail(self, email_id: int, user_id: int) -> EmailDetailResponse:
+        """Retorna o detalhe de um email especifico do usuario."""
+        email = self._email_repository.get_by_id_for_user(email_id, user_id)
         if email is None:
             raise ValueError("Email nao encontrado")
         return self._to_detail_response(email)

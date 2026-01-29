@@ -16,6 +16,10 @@ from app.services.email_service import EmailService
 
 router = APIRouter(prefix="/api/v1/emails", tags=["emails"])
 
+MAX_UPLOAD_BYTES = 2 * 1024 * 1024
+ALLOWED_EXTENSIONS = {".txt", ".pdf"}
+ALLOWED_MIME_TYPES = {"text/plain", "application/pdf"}
+
 
 def get_email_repository(session: Annotated[Session, Depends(get_session)]) -> EmailRepository:
     """Fornece repositorio de emails para uso nas rotas."""
@@ -32,7 +36,13 @@ def get_email_service(
 def extract_text_from_file(file: UploadFile) -> str:
     """Extrai texto de arquivos TXT ou PDF enviados na requisicao."""
     filename = (file.filename or "").lower()
-    content = file.file.read()
+    if not any(filename.endswith(extension) for extension in ALLOWED_EXTENSIONS):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato de arquivo nao suportado")
+    if file.content_type and file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Tipo de arquivo nao suportado")
+    content = file.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Arquivo excede o limite permitido")
     if filename.endswith(".pdf"):
         with pdfplumber.open(BytesIO(content)) as pdf:
             pages = [page.extract_text() or "" for page in pdf.pages]
@@ -75,9 +85,8 @@ def mark_responded(
     email_service: Annotated[EmailService, Depends(get_email_service)],
 ) -> EmailDetailResponse:
     """Marca um email como respondido."""
-    _ = current_user
     try:
-        return email_service.mark_responded(email_id)
+        return email_service.mark_responded(email_id, current_user.id or 0)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
@@ -99,8 +108,7 @@ def get_email_detail(
     email_service: Annotated[EmailService, Depends(get_email_service)],
 ) -> EmailDetailResponse:
     """Retorna o detalhe de um email especifico."""
-    _ = current_user
     try:
-        return email_service.get_email_detail(email_id)
+        return email_service.get_email_detail(email_id, current_user.id or 0)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

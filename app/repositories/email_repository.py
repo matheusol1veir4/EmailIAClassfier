@@ -17,6 +17,11 @@ class EmailRepository:
         """Busca um email pelo identificador unico."""
         return self._session.get(Email, email_id)
 
+    def get_by_id_for_user(self, email_id: int, user_id: int) -> Optional[Email]:
+        """Busca um email do usuario pelo identificador."""
+        statement = select(Email).where(Email.id == email_id, Email.user_id == user_id)
+        return self._session.exec(statement).first()
+
     def list_by_user(self, user_id: int, respondido: Optional[bool] = None) -> List[Email]:
         """Lista emails de um usuario com filtro opcional por status de resposta."""
         statement = select(Email).where(Email.user_id == user_id)
