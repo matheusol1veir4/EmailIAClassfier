@@ -40,7 +40,7 @@ def app(tmp_path) -> FastAPI:
 @pytest.fixture()
 def client(app: FastAPI) -> Generator[httpx.Client, None, None]:
     """Fornece um cliente HTTP para testes de API."""
-    transport = httpx.ASGITransport(app=app, lifespan="on")
+    transport = httpx.ASGITransport(app=app)
     with httpx.Client(transport=transport, base_url="http://test") as test_client:
         yield test_client
 
