@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     db_password: str = "postgres123"
     db_name: str = "emailClassifier"
     database_url: str = "postgresql://emailClassifier:postgres123@localhost:5432/emailClassifier"
-    seed_email: str = "admin@empresa.com"
-    seed_password: str = "admin123"
+    seed_email: str = ""
+    seed_password: str = ""
     secret_key: str = "troque_por_uma_chave_forte"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60

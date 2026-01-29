@@ -12,6 +12,8 @@ def seed_user() -> User:
     settings = get_settings()
     email = settings.seed_email
     password = settings.seed_password
+    if not email or not password:
+        raise ValueError("SEED_EMAIL e SEED_PASSWORD devem estar configurados no .env")
 
     with Session(engine) as session:
         repository = UserRepository(session)

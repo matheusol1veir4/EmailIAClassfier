@@ -287,8 +287,18 @@ async function fetchHistory() {
     }
 
     const data = await response.json();
-    state.history = data;
-    renderHistory(data);
+    state.history = data.emails || [];
+    renderHistory(state.history);
+    updateHistoryTotal(data.total);
+}
+
+function updateHistoryTotal(total) {
+    const totalElement = document.getElementById('historyTotal');
+    if (!totalElement) {
+        return;
+    }
+    const safeTotal = Number.isFinite(total) ? total : 0;
+    totalElement.textContent = `Total: ${safeTotal}`;
 }
 
 function renderHistory(items) {

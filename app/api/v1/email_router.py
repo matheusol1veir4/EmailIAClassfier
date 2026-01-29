@@ -59,7 +59,13 @@ def classify_email(
     if not email_body:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email vazio")
 
-    return email_service.process_email(current_user.id or 0, email_body, email_destinatario, assunto)
+    try:
+        return email_service.process_email(current_user.id or 0, email_body, email_destinatario, assunto)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Falha ao processar o email com a IA: {exc}",
+        ) from exc
 
 
 @router.post("/{email_id}/mark-responded", response_model=EmailDetailResponse)
