@@ -1,4 +1,4 @@
-from fastapi.testclient import TestClient
+import httpx
 from sqlmodel import Session
 
 from app.core.security import hash_password
@@ -35,7 +35,7 @@ def create_email(session: Session, user_id: int) -> Email:
     return email
 
 
-def login_and_get_token(client: TestClient, email: str, senha: str) -> str:
+def login_and_get_token(client: httpx.Client, email: str, senha: str) -> str:
     """Autentica usuario e retorna token."""
     response = client.post(
         "/api/v1/auth/login",
@@ -45,7 +45,7 @@ def login_and_get_token(client: TestClient, email: str, senha: str) -> str:
     return response.json()["access_token"]
 
 
-def test_email_ownership_enforced(client: TestClient, db_session: Session) -> None:
+def test_email_ownership_enforced(client: httpx.Client, db_session: Session) -> None:
     """Garante que usuario nao acessa emails de outro usuario."""
     user_a = create_user(db_session, "usera@empresa.com", "senha123")
     _ = create_user(db_session, "userb@empresa.com", "senha123")

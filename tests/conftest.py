@@ -2,9 +2,9 @@ import importlib
 import os
 from typing import Generator
 
+import httpx
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 
 
@@ -38,9 +38,10 @@ def app(tmp_path) -> FastAPI:
 
 
 @pytest.fixture()
-def client(app: FastAPI) -> Generator[TestClient, None, None]:
+def client(app: FastAPI) -> Generator[httpx.Client, None, None]:
     """Fornece um cliente HTTP para testes de API."""
-    with TestClient(app) as test_client:
+    transport = httpx.ASGITransport(app=app, lifespan="on")
+    with httpx.Client(transport=transport, base_url="http://test") as test_client:
         yield test_client
 
 

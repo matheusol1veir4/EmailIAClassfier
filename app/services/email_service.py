@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List
 
 from app.models.email_model import Email
@@ -56,8 +56,8 @@ class EmailService:
             raise ValueError("Email nao encontrado")
 
         email.respondido = True
-        email.respondido_em = datetime.utcnow()
-        email.updated_at = datetime.utcnow()
+        email.respondido_em = datetime.now(timezone.utc)
+        email.updated_at = datetime.now(timezone.utc)
         updated = self._email_repository.update(email)
         return self._to_detail_response(updated)
 

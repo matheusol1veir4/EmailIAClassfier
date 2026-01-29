@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.core.config import get_settings
 from app.core.security import create_access_token, hash_password, verify_password
@@ -39,7 +39,7 @@ class AuthService:
 
         user.password_hash = hash_password(payload.nova_senha)
         user.must_change_password = False
-        user.updated_at = datetime.utcnow()
+        user.updated_at = datetime.now(timezone.utc)
         self._user_repository.update(user)
 
     def get_me(self, user: User) -> UserResponse:

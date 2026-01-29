@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -12,20 +14,23 @@ from app.web.web_router import router as web_router
 
 def create_app() -> FastAPI:
     """Cria e configura a instancia principal do FastAPI."""
-    app = FastAPI(title="Email AI Classifier")
+    settings = get_settings()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        """Inicializa recursos essenciais da aplicacao."""
+        if settings.environment == "development":
+            create_db_and_tables()
+            if settings.seed_enabled:
+                seed_user()
+        yield
+
+    app = FastAPI(title="Email AI Classifier", lifespan=lifespan)
     app.mount("/static", StaticFiles(directory="app/web/static"), name="static")
     app.include_router(web_router)
     app.include_router(auth_router)
     app.include_router(email_router)
     app.include_router(health_router)
-
-    @app.on_event("startup")
-    def on_startup() -> None:
-        """Inicializa recursos essenciais da aplicacao."""
-        settings = get_settings()
-        create_db_and_tables()
-        if settings.seed_enabled:
-            seed_user()
 
     return app
 

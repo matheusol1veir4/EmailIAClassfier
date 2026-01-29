@@ -1,4 +1,4 @@
-from fastapi.testclient import TestClient
+import httpx
 from sqlmodel import Session
 
 from app.core.security import hash_password
@@ -18,7 +18,7 @@ def create_user(session: Session, email: str, senha: str) -> User:
     return user
 
 
-def test_login_and_me(client: TestClient, db_session: Session) -> None:
+def test_login_and_me(client: httpx.Client, db_session: Session) -> None:
     """Valida o login e o endpoint /me."""
     _ = create_user(db_session, "usuario@empresa.com", "senha123")
 
@@ -39,7 +39,7 @@ def test_login_and_me(client: TestClient, db_session: Session) -> None:
     assert me_response.json()["email_institucional"] == "usuario@empresa.com"
 
 
-def test_login_invalid_password(client: TestClient, db_session: Session) -> None:
+def test_login_invalid_password(client: httpx.Client, db_session: Session) -> None:
     """Garante que senha invalida retorna 401."""
     _ = create_user(db_session, "usuario@empresa.com", "senha123")
 
