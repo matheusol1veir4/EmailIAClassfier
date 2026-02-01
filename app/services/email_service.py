@@ -28,7 +28,10 @@ class EmailService:
         assunto: str | None = None,
     ) -> EmailResponse:
         """Processa um email e retorna apenas a classificacao."""
-        classification_result = self._classifier_client.classify_email(email_body)
+        classification_input = email_body
+        if assunto:
+            classification_input = f"Assunto: {assunto}\n\n{email_body}"
+        classification_result = self._classifier_client.classify_email(classification_input)
         classification = self._extract_label(classification_result)
 
         email = Email(
@@ -56,7 +59,10 @@ class EmailService:
         if not email.classification:
             raise ValueError("Email sem classificacao")
 
-        email.generated_response = self._llm_client.generate_response(email.classification, email.raw_body)
+        generated = self._llm_client.generate_response(email.classification, email.raw_body).strip()
+        if not generated:
+            raise ValueError("Resposta vazia gerada pelo modelo")
+        email.generated_response = generated
         email.updated_at = datetime.utcnow()
         updated = self._email_repository.update(email)
         return self._to_detail_response(updated)

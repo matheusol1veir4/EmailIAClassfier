@@ -4,6 +4,8 @@ const state = {
     lastAnalysis: null,
     lastResponse: null,
     history: [],
+    isProcessing: false,
+    isGenerating: false,
 };
 
 function setActiveTab() {
@@ -97,7 +99,7 @@ async function handleLogin(event) {
     }
     await refreshSessionUser();
     showToast('Login realizado');
-    window.location.href = '/';
+    window.location.href = '/app';
 }
 
 function configureLoginForm() {
@@ -130,6 +132,9 @@ function setupInputTabs() {
 }
 
 async function processEmail() {
+    if (state.isProcessing) {
+        return;
+    }
     const emailText = document.getElementById('emailText')?.value.trim();
     const emailDestinario = document.getElementById('emailDestinario')?.value.trim();
     const emailSubject = document.getElementById('emailSubject')?.value.trim();
@@ -146,6 +151,8 @@ async function processEmail() {
         return;
     }
 
+    state.isProcessing = true;
+    toggleSubmitButton(true);
     setLoadingState();
 
     const formData = new FormData();
@@ -159,11 +166,17 @@ async function processEmail() {
         formData.append('email_body', emailText || '');
     }
 
-    const response = await fetch('/api/v1/emails/classify', {
-        method: 'POST',
-        headers: state.token ? { Authorization: `Bearer ${state.token}` } : undefined,
-        body: formData,
-    });
+    let response;
+    try {
+        response = await fetch('/api/v1/emails/classify', {
+            method: 'POST',
+            headers: state.token ? { Authorization: `Bearer ${state.token}` } : undefined,
+            body: formData,
+        });
+    } finally {
+        state.isProcessing = false;
+        toggleSubmitButton(false);
+    }
 
     if (!response.ok) {
         setEmptyResult();
@@ -188,8 +201,17 @@ function renderResult(classification, responseText) {
     if (!resultSection) {
         return;
     }
-    const badgeClass = classification === 'Produtivo' ? 'badge-productive' : 'badge-unproductive';
-    const badgeText = classification === 'Produtivo' ? 'Produtivo' : 'Improdutivo';
+    const normalized = classification?.toLowerCase() || '';
+    const badgeClass = normalized === 'produtivo'
+        ? 'badge-productive'
+        : normalized === 'propaganda'
+            ? 'badge-propaganda'
+            : 'badge-unproductive';
+    const badgeText = normalized === 'produtivo'
+        ? 'Produtivo'
+        : normalized === 'propaganda'
+            ? 'Propaganda'
+            : 'Improdutivo';
     const responseContent = responseText
         ? `<div class="result-text" id="suggestedResponse">${responseText}</div>`
         : `<div class="result-text muted" id="suggestedResponse">Resposta ainda nao gerada.</div>`;
@@ -240,25 +262,63 @@ async function generateResponse(isRegenerate) {
     if (!state.lastAnalysis) {
         return;
     }
-    showToast(isRegenerate ? 'Gerando nova resposta' : 'Gerando resposta', '#0066cc');
-    const response = await fetch(`/api/v1/emails/${state.lastAnalysis.id}/generate-response`, {
-        method: 'POST',
-        headers: state.token ? { Authorization: `Bearer ${state.token}` } : undefined,
-    });
-
-    if (!response.ok) {
-        showToast('Nao foi possivel gerar resposta', '#ff9800');
+    if (state.isGenerating) {
         return;
     }
+    state.isGenerating = true;
+    toggleGenerateButtons(true);
+    showToast(isRegenerate ? 'Gerando nova resposta' : 'Gerando resposta', '#0066cc');
+    try {
+        const response = await fetch(`/api/v1/emails/${state.lastAnalysis.id}/generate-response`, {
+            method: 'POST',
+            headers: state.token ? { Authorization: `Bearer ${state.token}` } : undefined,
+        });
 
-    const data = await response.json();
-    state.lastResponse = data.generated_response;
-    const responseElement = document.getElementById('suggestedResponse');
-    if (responseElement) {
-        responseElement.textContent = state.lastResponse;
+        if (!response.ok) {
+            try {
+                const errorPayload = await response.json();
+                const detail = errorPayload.detail?.mensagem || errorPayload.detail || 'Nao foi possivel gerar resposta';
+                showToast(detail, '#ff9800');
+            } catch {
+                showToast('Nao foi possivel gerar resposta', '#ff9800');
+            }
+            return;
+        }
+
+        const data = await response.json();
+        state.lastResponse = data.generated_response;
+        const responseElement = document.getElementById('suggestedResponse');
+        if (responseElement) {
+            responseElement.textContent = state.lastResponse;
+        }
+        renderResult(state.lastAnalysis.classification, state.lastResponse);
+        showToast('Resposta gerada');
+    } finally {
+        state.isGenerating = false;
+        toggleGenerateButtons(false);
     }
-    renderResult(state.lastAnalysis.classification, state.lastResponse);
-    showToast('Resposta gerada');
+}
+
+function toggleSubmitButton(disabled) {
+    const button = document.getElementById('submitButton');
+    if (!button) {
+        return;
+    }
+    button.disabled = disabled;
+    button.textContent = disabled ? 'Processando...' : 'Classificar e Sugerir Resposta';
+}
+
+function toggleGenerateButtons(disabled) {
+    const generateButton = document.getElementById('generateResponse');
+    const regenerateButton = document.getElementById('regenerateResponse');
+    if (generateButton) {
+        generateButton.disabled = disabled;
+        generateButton.textContent = disabled ? 'Gerando...' : 'Gerar resposta';
+    }
+    if (regenerateButton) {
+        regenerateButton.disabled = disabled;
+        regenerateButton.textContent = disabled ? 'Gerando...' : 'Gerar novamente';
+    }
 }
 
 async function markResponded() {
@@ -316,7 +376,12 @@ function renderHistory(items) {
 
     historyBody.innerHTML = items
         .map((email, index) => {
-            const badgeClass = email.classification === 'Produtivo' ? 'badge-productive' : 'badge-unproductive';
+            const normalized = (email.classification || '').toLowerCase();
+            const badgeClass = normalized === 'produtivo'
+                ? 'badge-productive'
+                : normalized === 'propaganda'
+                    ? 'badge-propaganda'
+                    : 'badge-unproductive';
             return `
                 <tr>
                     <td>${email.respondido_em || email.created_at}</td>
@@ -426,7 +491,8 @@ function updateUserHeader() {
 }
 
 function requireAuth() {
-    const isLoginPage = window.location.pathname === '/login';
+    const currentPath = window.location.pathname;
+    const isLoginPage = currentPath === '/login';
     if (!state.token && !isLoginPage) {
         window.location.href = '/login';
     }

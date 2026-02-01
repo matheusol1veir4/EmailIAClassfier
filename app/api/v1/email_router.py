@@ -170,8 +170,19 @@ def generate_response(
             },
         ) from exc
     except ValueError as exc:
-        status_code = status.HTTP_404_NOT_FOUND if "nao encontrado" in str(exc).lower() else status.HTTP_400_BAD_REQUEST
-        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+        message = str(exc)
+        if "resposta vazia" in message.lower():
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail={
+                    "erro": "resposta_vazia",
+                    "mensagem": "O modelo nao gerou resposta. Tente novamente.",
+                },
+            ) from exc
+        status_code = status.HTTP_404_NOT_FOUND if "nao encontrado" in message.lower() else status.HTTP_400_BAD_REQUEST
+        raise HTTPException(status_code=status_code, detail=message) from exc
+
+
 
 
 @router.get("/history", response_model=EmailHistoryResponse)

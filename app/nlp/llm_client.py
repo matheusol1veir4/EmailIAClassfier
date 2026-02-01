@@ -18,6 +18,8 @@ class LlmClient:
         self._api_key = settings.llm_api_key
         self._endpoint = settings.llm_endpoint
         self._model = settings.llm_model
+        self._openrouter_referer = settings.openrouter_referer
+        self._openrouter_title = settings.openrouter_title
 
     def generate_response(self, classification: str, email_body: str) -> str:
         """Gera uma resposta automatica baseada na classificacao e no email."""
@@ -31,14 +33,11 @@ class LlmClient:
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.4,
-            "max_tokens": 256,
+            "max_tokens": 128,
         }
-        headers = {
-            "Authorization": f"Bearer {self._api_key}",
-            "Content-Type": "application/json",
-        }
+        headers = self._build_headers()
         try:
-            response = requests.post(self._endpoint, headers=headers, json=payload, timeout=30)
+            response = requests.post(self._endpoint, headers=headers, json=payload, timeout=300)
             response.raise_for_status()
         except requests.HTTPError as exc:
             status_code = exc.response.status_code if exc.response else None
@@ -77,12 +76,28 @@ class LlmClient:
     def _build_prompt(self, classification: str, email_body: str) -> str:
         """Construi o prompt para gerar resposta adequada ao contexto do email."""
         return (
+            "Voce e um assistente de suporte que redige respostas profissionais por email.\n"
+            "Responda em portugues brasileiro, com tom educado e objetivo.\n"
+            "Se a mensagem for propaganda, decline de forma cordial e encerre.\n"
+            "Se for improdutivo, responda de forma breve e nao incentive a conversa.\n"
+            "Se for produtivo, proponha o proximo passo claro.\n\n"
             "Classificacao: "
             f"{classification}.\n"
             "Email:\n"
             f"{email_body}\n\n"
-            "Escreva uma resposta curta, educada e objetiva em portugues brasileiro."
+            "Regras: responda em 3 a 6 frases, sem markdown, sem listas, sem assinaturas longas."
         )
+
+    def _build_headers(self) -> Dict[str, str]:
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
+        if self._openrouter_referer:
+            headers["HTTP-Referer"] = self._openrouter_referer
+        if self._openrouter_title:
+            headers["X-Title"] = self._openrouter_title
+        return headers
 
     def _extract_rate_limit_context(self, headers: Dict[str, str]) -> str:
         """Extrai informacoes de rate limit e request id dos headers."""
