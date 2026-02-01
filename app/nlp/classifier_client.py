@@ -35,6 +35,8 @@ class ClassifierClient:
         if not self._api_key:
             raise ConfigurationError("HUGGINGFACE_API_KEY nao configurada")
         normalized_text = self._strip_signature(text)
+        if "propaganda" in normalized_text.lower():
+            return {"label": "Propaganda", "score": 1.0}
         guideline = (
             "Regra: se o email contiver palavras como urgente,prioridade, urgentissimo ou solicito,preciso, envie uma equipe, tiver algum prazo para resposta, aguardo retorno"
             "considere como Produtivo.\n\n"

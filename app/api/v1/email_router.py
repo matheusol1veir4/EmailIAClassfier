@@ -4,6 +4,7 @@ from typing import Annotated, Optional
 
 import pdfplumber
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from pydantic import EmailStr
 from sqlmodel import Session
 
 from app.api.v1.auth_router import get_current_user
@@ -56,7 +57,7 @@ def extract_text_from_file(file: UploadFile) -> str:
 @router.post("/classify", response_model=EmailResponse)
 def classify_email(
     current_user: Annotated[User, Depends(get_current_user)],
-    email_destinatario: Annotated[str, Form(...)],
+    email_destinatario: Annotated[EmailStr, Form(...)],
     email_service: Annotated[EmailService, Depends(get_email_service)],
     email_body: Annotated[Optional[str], Form()] = None,
     assunto: Annotated[Optional[str], Form()] = None,
